@@ -1,193 +1,178 @@
 # Task Scheduler API
 
-A simple task management REST API built with Nest.js, PostgreSQL, and Prisma. This API allows you to create, update, track, and delete tasks.
+A single-user, headless REST API for managing tasks. It supports creating, retrieving, listing, filtering, updating and deleting tasks, with status tracking, pagination and optional scheduling.
+
+Built with **Next.js (App Router)**, **TypeScript**, **Prisma ORM** and **PostgreSQL**, and documented with **OpenAPI / Swagger UI**.
 
 ---
 
-## What is this project?
+## Features
 
-Imagine you have a to-do list app — but instead of buttons and a screen, everything is controlled through API calls. This project is exactly that. It is a **headless API** (no frontend/UI) that manages tasks.
-
----
-
-## Technology Used
-
-| Technology | What it does |
-|------------|-------------|
-| Next.js | The main framework that runs our server |
-| TypeScript | Makes JavaScript safer by adding types |
-| PostgreSQL | The database that stores our tasks |
-| Prisma | Helps us talk to the database easily |
-| Docker | Runs PostgreSQL in an isolated container |
-| Swagger UI | A visual interface to test our API |
+- Full CRUD for tasks
+- Four task statuses: `NEW`, `IN_PROGRESS`, `PENDING`, `COMPLETED`
+- Filter tasks by status
+- Pagination with metadata (`page`, `limit`, `total`, `totalPages`)
+- Optional scheduled date and time (`scheduledAt`)
+- Automatic completion timestamp (`completedAt`)
+- Input validation with consistent error responses
+- Interactive API documentation at `/docs`
 
 ---
 
-## Project Architecture (MVC)
+## Tech Stack
 
-This project follows the **MVC pattern** (Model, View, Controller):
-Request comes in
-↓
-Route Handler (receives the request)
-↓
-Controller (decides what to do)
-↓
-Service (applies business rules)
-↓
-Model (talks to database)
-↓
-Response goes back
-
-### Folder Structure
-src/
-app/
-api/
-tasks/
-route.ts → Receives GET and POST requests
-tasks/[id]/
-route.ts → Receives GET, PATCH, DELETE requests
-openapi/
-route.ts → Serves the API documentation
-docs/
-page.tsx → Swagger UI page
-controllers/
-task.controller.ts → Handles request and response logic
-services/
-task.service.ts → Contains business rules
-models/
-task.model.ts → Talks to the database
-validators/
-task.validator.ts → Validates incoming data
-lib/
-prisma.ts → Database connection
-prisma/
-schema.prisma → Database table definition
-migrations/ → Database change history
-
-
-
+| Layer | Technology |
+| --- | --- |
+| Framework | Next.js (App Router), TypeScript |
+| Database | PostgreSQL |
+| ORM | Prisma (with versioned migrations) |
+| API documentation | OpenAPI + Swagger UI |
+| Local database | Docker Compose |
 
 ---
 
-## Task Data Model
+## Architecture
 
-Each task has these fields:
+The project follows MVC adapted for a headless REST API, with each layer having a single responsibility:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| id | UUID | Unique ID, generated automatically |
-| title | String | Required, max 200 characters |
-| description | Text | Optional, max 5000 characters |
-| status | Enum | NEW, IN_PROGRESS, PENDING, COMPLETED |
-| scheduledAt | Timestamp | Optional planned date and time |
-| completedAt | Timestamp | Set automatically when status is COMPLETED |
-| createdAt | Timestamp | Set automatically when task is created |
-| updatedAt | Timestamp | Updated automatically when task changes |
-
----
-
-## Installation Guide
-
-### Step 1 — Requirements
-
-Make sure you have these installed:
-- Node.js (v18 or higher)
-- Docker Desktop
-- Git
-
-### Step 2 — Clone the project
-
-```bash
-git clone <your-repo-url>
-cd task-scheduler-api
+```
+Client / Swagger UI
+        ↓
+Route Handler      → receives the HTTP request and delegates
+        ↓
+Controller         → coordinates the request and response
+        ↓
+Service            → business rules (status and completedAt logic)
+        ↓
+Model / Data Access → database operations through Prisma
+        ↓
+PostgreSQL
 ```
 
-### Step 3 — Install dependencies
+---
+
+## Project Structure
+
+```
+├── prisma/
+│   ├── schema.prisma          # Database model
+│   └── migrations/            # Versioned database migrations
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── tasks/
+│   │   │   │   ├── route.ts         # POST /api/tasks, GET /api/tasks
+│   │   │   │   └── [id]/route.ts    # GET, PATCH, DELETE /api/tasks/{id}
+│   │   │   └── openapi/route.ts     # OpenAPI specification
+│   │   └── docs/page.tsx            # Swagger UI
+│   ├── controllers/           # Request coordination
+│   ├── services/              # Business rules
+│   ├── models/                # Data access
+│   ├── validators/            # Input validation
+│   └── lib/                   # Shared utilities
+├── docker-compose.yml
+├── .env.example
+└── package.json
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (LTS) and npm
+- Docker Desktop
+
+### 1. Clone and install
 
 ```bash
+git clone <repository-url>
+cd <repository-folder>
 npm install
 ```
 
-### Step 4 — Setup environment variables
+### 2. Configure environment variables
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and update if needed:
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/taskscheduler?schema=public"
+Set the database connection string in `.env`:
 
-
-### Step 5 — Start the database
-
-Make sure Docker Desktop is running, then:
-
-```bash
-docker-compose up -d
+```env
+DATABASE_URL="postgresql://<user>:<password>@localhost:5432/<database>"
 ```
 
-You should see: Container taskscheduler_db Started
+### 3. Start PostgreSQL
 
-### Step 6 — Run database migrations
+```bash
+docker compose up -d
+```
+
+### 4. Run database migrations
 
 ```bash
 npx prisma migrate dev
 ```
 
-This creates the tasks table in your database.
-
-### Step 7 — Start the server
+### 5. Start the server
 
 ```bash
 npm run dev
 ```
 
-You should see: Ready on http://localhost:3000
+The API runs at `http://localhost:3000`.
 
+### 6. Open the API documentation
+
+- Swagger UI: `http://localhost:3000/docs`
+- OpenAPI specification: `http://localhost:3000/api/openapi`
+
+### 7. Run tests
+
+```bash
+npm test
+```
 
 ---
 
-## Testing the API
+## API Endpoints
 
-### Using Swagger UI (Recommended)
+| Method | Endpoint | Description | Success |
+| --- | --- | --- | --- |
+| `POST` | `/api/tasks` | Create a task | `201 Created` |
+| `GET` | `/api/tasks` | List tasks (filter + pagination) | `200 OK` |
+| `GET` | `/api/tasks/{id}` | Get a task by ID | `200 OK` |
+| `PATCH` | `/api/tasks/{id}` | Partially update a task | `200 OK` |
+| `DELETE` | `/api/tasks/{id}` | Delete a task | `204 No Content` |
 
-Open your browser and go to: http://localhost:3000/docs
+### Query parameters for `GET /api/tasks`
 
+| Parameter | Description |
+| --- | --- |
+| `status` | Filter by `NEW`, `IN_PROGRESS`, `PENDING` or `COMPLETED` |
+| `page` | Page number |
+| `limit` | Number of tasks per page |
 
-You will see all the API endpoints. Click on any endpoint and click **"Try it out"** to test it.
+Results are ordered newest first, with ID as a secondary sort.
 
-### API Endpoints
+### Example — create a task
 
-| Method | Endpoint | What it does |
-|--------|----------|-------------|
-| GET | /api/tasks | Get all tasks |
-| POST | /api/tasks | Create a new task |
-| GET | /api/tasks/{id} | Get one task by ID |
-| PATCH | /api/tasks/{id} | Update a task |
-| DELETE | /api/tasks/{id} | Delete a task |
-
-### Example: Create a task
-
-```bash
+```http
 POST /api/tasks
 Content-Type: application/json
 
 {
-  "title": "Learn Prisma",
-  "description": "Learn how Prisma ORM works",
+  "title": "Learn PostgreSQL migrations",
+  "description": "Create and apply the initial task migration",
   "scheduledAt": "2026-10-01T09:00:00Z"
 }
 ```
 
-### Example: Filter tasks by status
+### Example — update status
 
-GET /api/tasks?status=PENDING
-GET /api/tasks?status=COMPLETED&page=1&limit=10
-
-
-### Example: Update task status
-
-```bash
+```http
 PATCH /api/tasks/{id}
 Content-Type: application/json
 
@@ -196,21 +181,38 @@ Content-Type: application/json
 }
 ```
 
----
-
-## Task Status Flow
-NEW → IN_PROGRESS → PENDING → COMPLETED
-
-- **NEW** → Task just created
-- **IN_PROGRESS** → Work has started
-- **PENDING** → Waiting or blocked
-- **COMPLETED** → Task finished (completedAt is set automatically)
+In a `PATCH` request, omitted fields stay unchanged and an explicit `null` clears an optional field.
 
 ---
 
-## Error Responses
+## Task Model
 
-All errors follow this format:
+| Field | Type | Rules |
+| --- | --- | --- |
+| `id` | UUID | Auto-generated primary key |
+| `title` | String | Required, 1–200 characters after trimming |
+| `description` | Text | Optional, max 5,000 characters |
+| `status` | Enum | `NEW`, `IN_PROGRESS`, `PENDING`, `COMPLETED`; defaults to `NEW` |
+| `scheduledAt` | Timestamp | Optional planned date/time |
+| `completedAt` | Timestamp | Managed automatically |
+| `createdAt` | Timestamp | Set on creation |
+| `updatedAt` | Timestamp | Updated on every change |
+
+All timestamps use ISO 8601 UTC format.
+
+### Completion timestamp rules
+
+- Moving a task **into** `COMPLETED` sets `completedAt`.
+- Moving a task **out of** `COMPLETED` clears `completedAt`.
+- Updating other fields of a completed task keeps the existing `completedAt`.
+
+Any status can move to any other status.
+
+---
+
+## Error Handling
+
+All errors use a consistent format:
 
 ```json
 {
@@ -227,22 +229,14 @@ All errors follow this format:
 }
 ```
 
-| Status Code | Meaning |
-|-------------|---------|
-| 200 | Success |
-| 201 | Created successfully |
-| 204 | Deleted successfully |
-| 400 | Invalid input |
-| 404 | Task not found |
-| 500 | Server error |
+| Status | When |
+| --- | --- |
+| `400 Bad Request` | Invalid input, malformed UUID, invalid pagination, unsupported fields or empty update |
+| `404 Not Found` | Task does not exist |
+| `500 Internal Server Error` | Unexpected failure (no internal details are exposed) |
 
 ---
 
-## Stopping the project
+## Out of Scope
 
-Stop the server: ctrl+c
-
-Stop the database:
-```bash
-docker-compose down
-```
+This version does not include authentication, multiple users, notifications, recurring tasks or automatic task execution. `scheduledAt` only stores the planned date and time.
